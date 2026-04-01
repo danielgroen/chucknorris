@@ -1,0 +1,1 @@
+export { useJokes } from './useJokes'
