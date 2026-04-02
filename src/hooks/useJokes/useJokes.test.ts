@@ -4,6 +4,7 @@ import { useJokes } from './useJokes'
 import { clearJokeCache } from '@services/cache'
 import type { Joke } from '@app-types/Joke.types'
 import { SpecialCategory } from '@enums'
+import { ALL_JOKES_QUERY } from '@consts'
 
 const makeJoke = (id: string): Joke => ({
   id,
@@ -15,17 +16,11 @@ const makeJoke = (id: string): Joke => ({
   updated_at: '2020-01-05 13:42:19.324003',
 })
 
-const mockCategories = ['animal', 'sport']
 const mockPool = Array.from({ length: 20 }, (_, i) => makeJoke(`pool-${i}`))
 const searchResult = { total: mockPool.length, result: mockPool }
 
 const makeFetch = () =>
-  vi.fn().mockImplementation((url: string) => {
-    if (url.includes('/categories')) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCategories) })
-    }
-    return Promise.resolve({ ok: true, json: () => Promise.resolve(searchResult) })
-  })
+  vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(searchResult) })
 
 describe('useJokes', () => {
   beforeEach(() => {
@@ -43,28 +38,34 @@ describe('useJokes', () => {
   })
 
   describe('All category', () => {
-    it('fetches all categories then each category jokes', async () => {
+    it('searches with ALL_JOKES_QUERY — exactly one API call', async () => {
       const { result } = renderHook(() => useJokes(SpecialCategory.All))
       await waitFor(() => expect(result.current.loading).toBe(false))
 
-      // 1 categories call + 1 per category
-      expect(fetch).toHaveBeenCalledTimes(1 + mockCategories.length)
+      expect(fetch).toHaveBeenCalledTimes(1)
+      expect(fetch).toHaveBeenCalledWith(
+        `https://api.chucknorris.io/jokes/search?query=${ALL_JOKES_QUERY}`,
+      )
+    })
+
+    it('displays 10 jokes from the pool', async () => {
+      const { result } = renderHook(() => useJokes(SpecialCategory.All))
+      await waitFor(() => expect(result.current.loading).toBe(false))
       expect(result.current.items).toHaveLength(10)
     })
 
-    it('uses cached data on second render — no extra API calls', async () => {
+    it('uses cache on second render — no extra API call', async () => {
       const { result: r1 } = renderHook(() => useJokes(SpecialCategory.All))
       await waitFor(() => expect(r1.current.loading).toBe(false))
-      const callsAfterFirst = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
       const { result: r2 } = renderHook(() => useJokes(SpecialCategory.All))
       await waitFor(() => expect(r2.current.loading).toBe(false))
-      expect((fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterFirst)
+      expect(fetch).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('Specific category', () => {
-    it('fetches jokes via search — exactly one API call', async () => {
+    it('searches with the category name — exactly one API call', async () => {
       const { result } = renderHook(() => useJokes('animal'))
       await waitFor(() => expect(result.current.loading).toBe(false))
 
@@ -72,7 +73,7 @@ describe('useJokes', () => {
       expect(fetch).toHaveBeenCalledWith('https://api.chucknorris.io/jokes/search?query=animal')
     })
 
-    it('uses cached data on second render — no extra API calls', async () => {
+    it('uses cache on second render — no extra API call', async () => {
       const { result: r1 } = renderHook(() => useJokes('animal'))
       await waitFor(() => expect(r1.current.loading).toBe(false))
 
@@ -81,7 +82,7 @@ describe('useJokes', () => {
       expect(fetch).toHaveBeenCalledTimes(1)
     })
 
-    it('displays up to 10 jokes from the pool', async () => {
+    it('displays up to 10 jokes', async () => {
       const { result } = renderHook(() => useJokes('animal'))
       await waitFor(() => expect(result.current.loading).toBe(false))
       expect(result.current.items).toHaveLength(10)
@@ -111,7 +112,7 @@ describe('useJokes', () => {
 
   it('sets error state when fetch fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
-    const { result } = renderHook(() => useJokes(SpecialCategory.All))
+    const { result } = renderHook(() => useJokes('animal'))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.error).toBe('Failed to load jokes')
   })

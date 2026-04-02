@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import { renderWithRouter } from './test-utils'
 import App from './App'
+import { clearJokeCache } from '@services/cache'
 import type { Joke } from '@app-types/Joke.types'
 
 const makeJoke = (id: string): Joke => ({
@@ -14,18 +15,22 @@ const makeJoke = (id: string): Joke => ({
   updated_at: '2020-01-05 13:42:19.324003',
 })
 
-let callCount = 0
-const mockFetch = () => {
-  callCount++
+const mockCategories = ['animal', 'sport']
+const mockPool = Array.from({ length: 20 }, (_, i) => makeJoke(`pool-${i}`))
+
+const mockFetch = (url: string) => {
+  if (url.includes('/categories')) {
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCategories) })
+  }
   return Promise.resolve({
     ok: true,
-    json: () => Promise.resolve(makeJoke(`id-${callCount}`)),
+    json: () => Promise.resolve({ total: mockPool.length, result: mockPool }),
   })
 }
 
 describe('App', () => {
   beforeEach(() => {
-    callCount = 0
+    clearJokeCache()
     localStorage.clear()
     vi.stubGlobal('fetch', vi.fn().mockImplementation(mockFetch))
   })

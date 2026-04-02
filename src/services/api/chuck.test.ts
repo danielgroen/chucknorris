@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchCategories, fetchJokesByCategory, fetchAllCategoryJokes } from './chuck'
+import { fetchCategories, fetchJokesByCategory } from './chuck'
 import { clearJokeCache } from '@services/cache'
 import type { Joke } from '@app-types/Joke.types'
 
@@ -74,7 +74,7 @@ describe('chuck.api', () => {
       expect(fetch).toHaveBeenCalledTimes(1)
     })
 
-    it('fetches different categories separately (no cross-category cache pollution)', async () => {
+    it('fetches different categories separately', async () => {
       await fetchJokesByCategory('animal')
       await fetchJokesByCategory('sport')
       expect(fetch).toHaveBeenCalledTimes(2)
@@ -83,37 +83,6 @@ describe('chuck.api', () => {
     it('throws when response is not ok', async () => {
       vi.stubGlobal('fetch', createMockFetch(null, false))
       await expect(fetchJokesByCategory('animal')).rejects.toThrow('Failed to fetch jokes')
-    })
-  })
-
-  describe('fetchAllCategoryJokes', () => {
-    it('fetches categories then jokes for each category', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn()
-          .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockCategories) })
-          .mockResolvedValue({ ok: true, json: () => Promise.resolve(searchResult) }),
-      )
-
-      const jokes = await fetchAllCategoryJokes()
-      // 1 categories call + 1 per category
-      expect(fetch).toHaveBeenCalledTimes(1 + mockCategories.length)
-      expect(jokes).toHaveLength(searchResult.result.length * mockCategories.length)
-    })
-
-    it('uses cached data — no extra API calls on second invocation', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn()
-          .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockCategories) })
-          .mockResolvedValue({ ok: true, json: () => Promise.resolve(searchResult) }),
-      )
-
-      await fetchAllCategoryJokes()
-      const callsAfterFirst = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
-
-      await fetchAllCategoryJokes()
-      expect((fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterFirst)
     })
   })
 })

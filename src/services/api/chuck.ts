@@ -28,9 +28,3 @@ export const fetchJokesByCategory = async (category: string): Promise<Joke[]> =>
   setCachedJokes(category, data.result)
   return data.result
 }
-
-export const fetchAllCategoryJokes = async (): Promise<Joke[]> => {
-  const categories = await fetchCategories()
-  const results = await Promise.all(categories.map(cat => fetchJokesByCategory(cat)))
-  return results.flat()
-}

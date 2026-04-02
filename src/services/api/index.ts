@@ -1,1 +1,1 @@
-export { fetchCategories, fetchJokesByCategory, fetchAllCategoryJokes } from './chuck'
+export { fetchCategories, fetchJokesByCategory } from './chuck'

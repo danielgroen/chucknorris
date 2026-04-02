@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { fetchAllCategoryJokes, fetchJokesByCategory } from '@services/api'
-import { MAX_JOKES, JOKES_INITIAL_COUNT } from '@consts'
+import { fetchJokesByCategory } from '@services/api'
+import { MAX_JOKES, JOKES_INITIAL_COUNT, ALL_JOKES_QUERY } from '@consts'
 import { SpecialCategory } from '@enums'
 import type { Joke, JokeListItem } from '@app-types/Joke.types'
 
@@ -22,31 +22,22 @@ export const useJokes = (category: string) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const isAll = category === SpecialCategory.All
+  const searchQuery = category === SpecialCategory.All ? ALL_JOKES_QUERY : category
 
   useEffect(() => {
     setLoading(true)
     setError(null)
 
-    const load = async () => {
-      try {
-        const jokes = isAll
-          ? await fetchAllCategoryJokes()
-          : await fetchJokesByCategory(category)
-
+    fetchJokesByCategory(searchQuery)
+      .then(jokes => {
         setPool(jokes)
         setItems(pickRandom(jokes, JOKES_INITIAL_COUNT).map((joke, i) => toListItem(joke, i)))
-      } catch {
-        setError('Failed to load jokes')
-      } finally {
-        setLoading(false)
-      }
-    }
+      })
+      .catch(() => setError('Failed to load jokes'))
+      .finally(() => setLoading(false))
+  }, [searchQuery])
 
-    load()
-  }, [category, isAll])
-
-  // Timer tick: always picks from the in-memory pool — zero API calls
+  // Timer tick — always picks from in-memory pool, zero API calls
   const addJoke = useCallback(async () => {
     setItems(prev => {
       if (pool.length === 0) return prev
