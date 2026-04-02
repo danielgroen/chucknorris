@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Redirect to the app with the original path encoded in the query string.
+      // The app picks this up in index.html and restores the URL.
+      var path = window.location.pathname.replace(/\/chucknorris/, '') || '/';
+      window.location.replace(
+        window.location.origin + '/chucknorris/?p=' + encodeURIComponent(path)
+      );
+    </script>
+  </head>
+</html>
